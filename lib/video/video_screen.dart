@@ -16,9 +16,7 @@ class _VideoAppState extends State<VideoApp> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.network(
-        'https://flutter.github.io/assets-for-api-docs/assets/videos/bee.mp4')
-    //VideoPlayerController.asset("lib/assets/test_video.mp4")
+    _controller = VideoPlayerController.network("https://firebasestorage.googleapis.com/v0/b/first-prj-66a8e.appspot.com/o/zoom_0.mp4?alt=media")
       ..initialize().then((_) {
         // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
         setState(() {});
@@ -44,6 +42,7 @@ class _VideoAppState extends State<VideoApp> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           FloatingActionButton(
+            heroTag: "btn_play",
             onPressed: () async {
               
               setState(() {
@@ -60,11 +59,16 @@ class _VideoAppState extends State<VideoApp> {
             width: 50,
           ),
           FloatingActionButton(
+            heroTag: "btn_duet",
             backgroundColor: Colors.transparent,
             onPressed: () {    
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => CameraApp(duetVideoController: _controller!,)),
+                MaterialPageRoute(builder: (context) => const CameraApp(
+                  videoSource: 'https://firebasestorage.googleapis.com/v0/b/first-prj-66a8e.appspot.com/o/zoom_0.mp4?alt=media',
+                  videoSubtitle: "https://pastebin.com/raw/pkZ3STDk",
+                  recordScript: "https://pastebin.com/raw/XXcYcPA6",
+                )),
               ).then((value) => _controller!.pause());
             },
             child: const Text('Duet video'),

@@ -1,9 +1,10 @@
 import 'dart:async';
 import 'dart:math';
+import 'package:camera/camera.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:camera/camera.dart';
 import 'package:flutter_ffmpeg/flutter_ffmpeg.dart';
+import 'package:flutter_video_duet/duet_screen/ffmpeg_config.dart';
 import 'package:flutter_video_duet/preview_screen/preview_screen.dart';
 import 'package:flutter_video_duet/video/video_screen.dart';
 import 'package:gallery_saver/gallery_saver.dart';
@@ -16,9 +17,15 @@ import 'package:subtitle_wrapper_package/subtitle_wrapper_package.dart';
 import 'package:video_player/video_player.dart';
 
 class CameraApp extends StatefulWidget {
-  final VideoPlayerController duetVideoController;
+  final String videoSource;
+  final String recordScript;
+  final String videoSubtitle;
 
-  const CameraApp({Key? key, required this.duetVideoController})
+  const CameraApp(
+      {Key? key,
+      required this.videoSource,
+      required this.recordScript,
+      required this.videoSubtitle})
       : super(key: key);
 
   @override
@@ -26,45 +33,34 @@ class CameraApp extends StatefulWidget {
 }
 
 class _CameraAppState extends State<CameraApp> {
-  List<CameraDescription>? cameras;
-  CameraController? controller;
+  FFmpegConfig ffmpegConfig = FFmpegConfig();
 
+  List<CameraDescription>? cameras;
+  CameraController? cameraController;
   bool isInitCamera = false;
   bool isInitVideo = false;
-
   XFile? videoFile;
   String? cache;
 
   //listen to duet video
+  VideoPlayerController? duetVideoController;
   bool _isPlaying = false;
   Duration? _duration;
   Duration? _position;
   bool _isEnd = false;
 
-  //duet video merging size
-  static const VERTICAL_DUET_WIDTH = 360;
-  static const VERTICAL_DUET_HEIGHT = 640;
-  late double videoWidth, videoHeight, paddingVer, paddingHoz = 0;
-
   //show loading when process video
   bool _showLoading = false;
 
   //subtitle
-  final SubtitleController teacherSub = SubtitleController(
-    subtitleUrl: "https://pastebin.com/raw/pkZ3STDk",
-    subtitleType: SubtitleType.srt,
-  );
-
-  final SubtitleController studentSub = SubtitleController(
-    subtitleUrl: "https://pastebin.com/raw/XXcYcPA6",
-    subtitleType: SubtitleType.srt,
-  );
+  SubtitleController? teacherSub;
+  SubtitleController? studentSub;
 
   Future<void> initCamera() async {
     cameras = await availableCameras();
     cache = (await getTemporaryDirectory()).path;
-    controller = CameraController(cameras![1], ResolutionPreset.max);
-    controller!.initialize().then((_) {
+    cameraController = CameraController(cameras![1], ResolutionPreset.max);
+    cameraController!.initialize().then((_) {
       if (!mounted) {
         return;
       }
@@ -75,9 +71,15 @@ class _CameraAppState extends State<CameraApp> {
   }
 
   void initVideo() {
-    widget.duetVideoController
+    duetVideoController = VideoPlayerController.network(widget.videoSource)
+      ..initialize().then((_) {
+        // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
+        setState(() {
+          isInitVideo = true;
+        });
+      })
       ..addListener(() {
-        final bool isPlaying = widget.duetVideoController.value.isPlaying;
+        final bool isPlaying = duetVideoController!.value.isPlaying;
         if (isPlaying != _isPlaying) {
           setState(() {
             _isPlaying = isPlaying;
@@ -85,29 +87,37 @@ class _CameraAppState extends State<CameraApp> {
         }
         Timer.run(() {
           setState(() {
-            _position = widget.duetVideoController.value.position;
+            _position = duetVideoController!.value.position;
           });
         });
         setState(() {
-          _duration = widget.duetVideoController.value.duration;
+          _duration = duetVideoController!.value.duration;
         });
-        _duration?.compareTo(_position!) == 0 ||
-                _duration?.compareTo(_position!) == -1
-            ? setState(() {
-                //stop when the duetvideo end
-                _isEnd = true;
-                onStopButtonPressed();
-              })
-            : setState(() {
-                _isEnd = false;
-              });
-      })
-      ..initialize().then((_) {
-        // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
-        setState(() {
-          isInitVideo = true;
-        });
+        if (_position != null) {
+          _duration?.compareTo(_position!) == 0 ||
+                  _duration?.compareTo(_position!) == -1
+              ? setState(() {
+                  //stop when the duetvideo end
+                  print("video end");
+                  _isEnd = true;
+                  onStopButtonPressed();
+                })
+              : setState(() {
+                  _isEnd = false;
+                });
+        }
       });
+  }
+
+  void initSubtitle() {
+    teacherSub = SubtitleController(
+      subtitleUrl: widget.videoSubtitle,
+      subtitleType: SubtitleType.srt,
+    );
+    studentSub = SubtitleController(
+      subtitleUrl: widget.recordScript,
+      subtitleType: SubtitleType.srt,
+    );
   }
 
   @override
@@ -115,25 +125,13 @@ class _CameraAppState extends State<CameraApp> {
     super.initState();
     initVideo();
     initCamera();
+    initSubtitle();
   }
 
   @override
   void dispose() {
-    controller?.dispose();
+    cameraController?.dispose();
     super.dispose();
-  }
-
-  void resizeInput() {
-    double orginalWidth = widget.duetVideoController.value.size.width;
-    double orginalHeight = widget.duetVideoController.value.size.height;
-
-    double resizeFactor = min(VERTICAL_DUET_WIDTH / orginalWidth,
-        VERTICAL_DUET_HEIGHT / orginalHeight);
-
-    videoWidth = orginalWidth * resizeFactor;
-    videoHeight = orginalHeight * resizeFactor;
-    paddingHoz = (VERTICAL_DUET_WIDTH - videoWidth) / 2;
-    paddingVer = (VERTICAL_DUET_HEIGHT - videoHeight) / 2;
   }
 
   @override
@@ -156,12 +154,12 @@ class _CameraAppState extends State<CameraApp> {
                               children: [
                                 Expanded(
                                     child: AspectRatio(
-                                        aspectRatio:
-                                            1 / controller!.value.aspectRatio,
+                                        aspectRatio: 1 /
+                                            cameraController!.value.aspectRatio,
                                         child: SubTitleWrapper(
-                                            subtitleController: studentSub,
+                                            subtitleController: studentSub!,
                                             videoPlayerController:
-                                                widget.duetVideoController,
+                                                duetVideoController!,
                                             subtitleStyle: const SubtitleStyle(
                                               textColor: Colors.white,
                                               hasBorder: true,
@@ -169,13 +167,12 @@ class _CameraAppState extends State<CameraApp> {
                                                 bottom: 0,
                                               ),
                                             ),
-                                            videoChild:
-                                                CameraPreview(controller!)))),
+                                            videoChild: CameraPreview(
+                                                cameraController!)))),
                                 Expanded(
                                   child: SubTitleWrapper(
-                                    subtitleController: teacherSub,
-                                    videoPlayerController:
-                                        widget.duetVideoController,
+                                    subtitleController: teacherSub!,
+                                    videoPlayerController: duetVideoController!,
                                     subtitleStyle: const SubtitleStyle(
                                       textColor: Colors.white,
                                       hasBorder: true,
@@ -184,16 +181,14 @@ class _CameraAppState extends State<CameraApp> {
                                       ),
                                     ),
                                     videoChild: AspectRatio(
-                                        aspectRatio:
-                                            1 / controller!.value.aspectRatio,
+                                        aspectRatio: 1 /
+                                            cameraController!.value.aspectRatio,
                                         child: Center(
                                           child: AspectRatio(
-                                            aspectRatio: widget
-                                                .duetVideoController
-                                                .value
-                                                .aspectRatio,
+                                            aspectRatio: duetVideoController!
+                                                .value.aspectRatio,
                                             child: VideoPlayer(
-                                                widget.duetVideoController),
+                                                duetVideoController!),
                                           ),
                                         )),
                                   ),
@@ -204,7 +199,7 @@ class _CameraAppState extends State<CameraApp> {
                     ),
                   ),
                   VideoProgressIndicator(
-                    widget.duetVideoController,
+                    duetVideoController!,
                     allowScrubbing: false,
                   ),
                 ],
@@ -255,16 +250,8 @@ class _CameraAppState extends State<CameraApp> {
                                     style: TextStyle(color: Colors.red),
                                   ),
                                   onTap: () {
-                                    // widget.duetVideoController.dispose();
-                                    // controller!.dispose();
                                     Navigator.pop(context);
                                     Navigator.pop(context);
-                                    // Navigator.push(
-                                    //   context,
-                                    //   MaterialPageRoute(
-                                    //       builder: (context) =>
-                                    //           const VideoApp()),
-                                    // );
                                   },
                                 ),
                               ],
@@ -281,8 +268,25 @@ class _CameraAppState extends State<CameraApp> {
                 left: 0,
                 child: _captureControlRowWidget()),
             if (_showLoading)
-              const Center(
-                child: CircularProgressIndicator(),
+              Center(
+                child: Container(
+                    width: 130,
+                    height: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.black38,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: const [
+                        CircularProgressIndicator(),
+                        Text(
+                          "Processing...",
+                          style: TextStyle(color: Colors.white, fontSize: 18),
+                        ),
+                      ],
+                    )),
               ),
           ],
         ),
@@ -291,51 +295,69 @@ class _CameraAppState extends State<CameraApp> {
   }
 
   Widget _captureControlRowWidget() {
-    final CameraController? cameraController = controller;
+    if (cameraController != null && cameraController!.value.isInitialized) {
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.spaceAround,
+        children: <Widget>[
+          IconButton(
+              icon: studentSub!.showSubtitles
+                  ? const Icon(Icons.subtitles)
+                  : const Icon(Icons.subtitles_off),
+              color: Colors.white,
+              iconSize: 30,
+              onPressed: () {
+                setState(() {
+                  onSubtitlePressed();
+                  print(studentSub!.showSubtitles);
+                });
+              }),
+          IconButton(
+              iconSize: 100,
+              color: Colors.red,
+              icon: cameraController!.value.isRecordingVideo &&
+                      !cameraController!.value.isRecordingPaused
+                  ? const Icon(
+                      Icons.stop_circle_outlined,
+                    )
+                  : const Icon(
+                      Icons.radio_button_on,
+                    ),
+              onPressed: () {
+                if (cameraController!.value.isRecordingVideo) {
+                  if (cameraController!.value.isRecordingPaused) {
+                    onResumeButtonPressed();
+                  } else {
+                    onPauseButtonPressed();
+                  }
+                } else {
+                  onVideoRecordButtonPressed();
+                }
+              }),
+          IconButton(
+              icon: const Icon(Icons.check_circle),
+              color: Colors.red,
+              iconSize: 30,
+              onPressed: () {
+                if (cameraController!.value.isRecordingVideo) {
+                  onStopButtonPressed(isEnd: false);
+                }
+              }),
+        ],
+      );
+    } else {
+      return Container();
+    }
+  }
 
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
-      children: <Widget>[
-        const SizedBox(width: 30),
-        IconButton(
-          iconSize: 100,
-          color: Colors.red,
-          icon: cameraController != null &&
-                  cameraController.value.isRecordingVideo &&
-                  !cameraController.value.isRecordingPaused
-              ? const Icon(
-                  Icons.stop_circle_outlined,
-                )
-              : const Icon(
-                  Icons.radio_button_on,
-                ),
-          onPressed:
-              cameraController != null && cameraController.value.isInitialized
-                  ? (cameraController.value.isRecordingVideo)
-                      ? (cameraController.value.isRecordingPaused)
-                          ? onResumeButtonPressed
-                          : onPauseButtonPressed
-                      : onVideoRecordButtonPressed
-                  : onVideoRecordButtonPressed,
-        ),
-        IconButton(
-          icon: const Icon(Icons.check_circle),
-          color: Colors.red,
-          iconSize: 30,
-          onPressed: cameraController != null &&
-                  cameraController.value.isInitialized &&
-                  cameraController.value.isRecordingVideo
-              ? onStopButtonPressed
-              : null,
-        ),
-      ],
-    );
+  void onSubtitlePressed() {
+    studentSub!.showSubtitles = !studentSub!.showSubtitles;
+    teacherSub!.showSubtitles = !teacherSub!.showSubtitles;
   }
 
   void onVideoRecordButtonPressed() {
-    print("object");
     startVideoRecording().then((_) {
       if (mounted) setState(() {});
+      print('Video recording start');
     });
   }
 
@@ -353,37 +375,19 @@ class _CameraAppState extends State<CameraApp> {
     });
   }
 
-  void onStopButtonPressed() {
-    widget.duetVideoController.pause();
+  void onStopButtonPressed({bool isEnd = true}) {
+    if (!isEnd) duetVideoController!.pause();
     stopVideoRecording().then((file) async {
       if (mounted) setState(() {});
       if (file != null) {
-        print('Video recorded to ${file.path}');
-        videoFile = file;
-        resizeInput();
-        String filter = //" [0:v]scale=1080:-1[v0];[v0][1:v]vstack=inputs=2 ";
-            " [0:v]setpts=PTS-STARTPTS,scale=$VERTICAL_DUET_WIDTH:$VERTICAL_DUET_HEIGHT,fps=60,setsar=1[l];"
-            "[1:v]setpts=PTS-STARTPTS,scale=$videoWidth:$videoHeight,pad=$VERTICAL_DUET_WIDTH:$VERTICAL_DUET_HEIGHT:$paddingHoz:$paddingVer,fps=60,setsar=1[r];"
-            "[l][r]hstack=inputs=2:shortest=1,format=yuv420p;[0][1]amerge ";
-
         setState(() {
           _showLoading = true;
         });
+        ffmpegConfig.resizeInput(duetVideoController!.value.size.width,
+            duetVideoController!.value.size.height);
 
-        await FlutterFFmpeg()
-            .execute(" -y -i " +
-                videoFile!.path +
-                //"https://firebasestorage.googleapis.com/v0/b/first-prj-66a8e.appspot.com/o/test_video.mp4?alt=media" +
-                " -i " +
-                //"http://techslides.com/demos/sample-videos/small.mp4" +
-                //videoFile!.path +
-                widget.duetVideoController.dataSource +
-                //"https://firebasestorage.googleapis.com/v0/b/first-prj-66a8e.appspot.com/o/video-1635993394.mp4?alt=media" +
-                //"https://file-examples-com.github.io/uploads/2017/04/file_example_MP4_480_1_5MG.mp4" +
-                " -filter_complex" +
-                filter +
-                "-c:v libx264 -crf 20 -c:a aac -strict -2 " +
-                //"-c:v mpeg2video -q:v 3 " +
+        await ffmpegConfig
+            .excute(file.path, duetVideoController!.dataSource,
                 "$cache/duetvideo.mp4")
             .then((_) => {
                   setState(() {
@@ -391,38 +395,34 @@ class _CameraAppState extends State<CameraApp> {
                   })
                 });
 
-        await GallerySaver.saveVideo("$cache/duetvideo.mp4");
+        //await GallerySaver.saveVideo("$cache/duetvideo.mp4");
 
         Navigator.push(
           context,
           MaterialPageRoute(
               builder: (context) =>
                   PreviewVideo(videoPath: XFile("$cache/duetvideo.mp4"))),
-        ).then((value) => null);
+        ).then((_) {
+          remakeRecording();
+        });
       }
     });
   }
 
   void remakeRecording() {
-    setState(() {
-      controller!.stopVideoRecording();
-      widget.duetVideoController.pause();
-      widget.duetVideoController.seekTo(const Duration(seconds: 0));
-      
-    });
+    cameraController!.stopVideoRecording();
+    duetVideoController!.pause();
+    duetVideoController!.seekTo(const Duration(seconds: 0));
   }
 
   Future<void> startVideoRecording() async {
-    final CameraController? cameraController = controller;
-
     if (cameraController!.value.isRecordingVideo) {
       // A recording is already started, do nothing.
       return;
     }
-
     try {
-      await cameraController.startVideoRecording();
-      widget.duetVideoController.play();
+      await cameraController!.startVideoRecording();
+      duetVideoController!.play();
     } on CameraException catch (e) {
       print(e);
       return;
@@ -430,15 +430,13 @@ class _CameraAppState extends State<CameraApp> {
   }
 
   Future<void> resumeVideoRecording() async {
-    final CameraController? cameraController = controller;
-
-    if (cameraController == null || !cameraController.value.isRecordingVideo) {
+    if (cameraController == null || !cameraController!.value.isRecordingVideo) {
       return null;
     }
 
     try {
-      await cameraController.resumeVideoRecording();
-      widget.duetVideoController.play();
+      await cameraController!.resumeVideoRecording();
+      duetVideoController!.play();
     } on CameraException catch (e) {
       print(e);
       rethrow;
@@ -446,15 +444,13 @@ class _CameraAppState extends State<CameraApp> {
   }
 
   Future<void> pauseVideoRecording() async {
-    final CameraController? cameraController = controller;
-
-    if (cameraController == null || !cameraController.value.isRecordingVideo) {
+    if (cameraController == null || !cameraController!.value.isRecordingVideo) {
       return null;
     }
 
     try {
-      await cameraController.pauseVideoRecording();
-      widget.duetVideoController.pause();
+      await cameraController!.pauseVideoRecording();
+      duetVideoController!.pause();
     } on CameraException catch (e) {
       print(e);
       rethrow;
@@ -462,14 +458,12 @@ class _CameraAppState extends State<CameraApp> {
   }
 
   Future<XFile?> stopVideoRecording() async {
-    final CameraController? cameraController = controller;
-
-    if (cameraController == null || !cameraController.value.isRecordingVideo) {
+    if (cameraController == null || !cameraController!.value.isRecordingVideo) {
       return null;
     }
 
     try {
-      return cameraController.stopVideoRecording();
+      return cameraController!.stopVideoRecording();
     } on CameraException catch (e) {
       print(e);
       return null;
