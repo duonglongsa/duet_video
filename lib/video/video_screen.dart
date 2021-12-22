@@ -16,11 +16,12 @@ class _VideoAppState extends State<VideoApp> {
   @override
   void initState() {
     super.initState();
-    _controller = VideoPlayerController.network("https://firebasestorage.googleapis.com/v0/b/first-prj-66a8e.appspot.com/o/zoom_0.mp4?alt=media")
+    _controller = VideoPlayerController.network(
+        "https://firebasestorage.googleapis.com/v0/b/first-prj-66a8e.appspot.com/o/video-1635993394.mp4?alt=media")
       ..initialize().then((_) {
         // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
         setState(() {});
-      });    
+      });
   }
 
   @override
@@ -34,9 +35,11 @@ class _VideoAppState extends State<VideoApp> {
                 child: VideoPlayer(_controller!),
               )
             : Container(
-              height: 200,
-              child: const Center(child: CircularProgressIndicator(),),
-            ),
+                height: 200,
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
       ),
       floatingActionButton: Row(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -44,11 +47,12 @@ class _VideoAppState extends State<VideoApp> {
           FloatingActionButton(
             heroTag: "btn_play",
             onPressed: () async {
-              
               setState(() {
-                _controller!.value.isPlaying
-                    ? _controller!.pause()
-                    : _controller!.play();
+                if (!_controller!.value.isPlaying) {
+                  _controller!.play();
+                } else {
+                  _controller!.pause();
+                }
               });
             },
             child: Icon(
@@ -61,14 +65,16 @@ class _VideoAppState extends State<VideoApp> {
           FloatingActionButton(
             heroTag: "btn_duet",
             backgroundColor: Colors.transparent,
-            onPressed: () {    
+            onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const CameraApp(
-                  videoSource: 'https://firebasestorage.googleapis.com/v0/b/first-prj-66a8e.appspot.com/o/zoom_0.mp4?alt=media',
-                  videoSubtitle: "https://pastebin.com/raw/pkZ3STDk",
-                  recordScript: "https://pastebin.com/raw/XXcYcPA6",
-                )),
+                MaterialPageRoute(
+                    builder: (context) => const CameraApp(
+                          videoSource:
+                              'https://firebasestorage.googleapis.com/v0/b/first-prj-66a8e.appspot.com/o/video-1635993394.mp4?alt=media',
+                          videoSubtitle: "https://pastebin.com/raw/pkZ3STDk",
+                          recordScript: "https://pastebin.com/raw/XXcYcPA6",
+                        )),
               ).then((value) => _controller!.pause());
             },
             child: const Text('Duet video'),

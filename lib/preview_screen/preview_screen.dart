@@ -26,40 +26,144 @@ class _PreviewVideoState extends State<PreviewVideo> {
         // Ensure the first frame is shown after the video is initialized, even before the play button has been pressed.
         setState(() {});
       });
+    _controller!.setLooping(true);
+    _controller!.play();
+  }
+
+  @override
+  void dispose() {
+    _controller!.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      body: Center(
-        child: _controller!.value.isInitialized
-            ? AspectRatio(
-                aspectRatio: _controller!.value.aspectRatio,
-                child: VideoPlayer(_controller!),
-              )
-            : const Text("Can't play video!", style: TextStyle(color: Colors.white),),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          setState(() {
-            _controller!.value.isPlaying
-                ? _controller!.pause()
-                : _controller!.play();
-          });
-        },
-        child: Icon(
-          _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+    return SafeArea(
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(0, 20, 10, 0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  IconButton(
+                      color: Colors.white,
+                      icon: const Icon(Icons.arrow_back_ios),
+                      onPressed: () {
+                        showModalBottomSheet(
+                            context: context,
+                            shape: const RoundedRectangleBorder(
+                              borderRadius: BorderRadius.only(
+                                topLeft: Radius.circular(10),
+                                topRight: Radius.circular(10),
+                              ),
+                            ),
+                            backgroundColor: Colors.white,
+                            builder: (BuildContext context) {
+                              return Wrap(
+                                children: [
+                                  Column(
+                                    children: [
+                                      ListTile(
+                                        title: const Center(
+                                          child: Text(
+                                            "Delete this recording",
+                                            style: TextStyle(color: Colors.red),
+                                          ),
+                                        ),
+                                        onTap: () {
+                                          Navigator.pop(context);
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                      ListTile(
+                                        title: const Center(
+                                          child: Text(
+                                            "Cancel",
+                                            style:
+                                                TextStyle(color: Colors.black87),
+                                          ),
+                                        ),
+                                        onTap: () {
+                                          Navigator.pop(context);
+                                        },
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            });
+                      }),
+                  TextButton(
+                      style: TextButton.styleFrom(backgroundColor: Colors.red),
+                      onPressed: () {},
+                      child: const Text(
+                        "Continue",
+                        style: TextStyle(color: Colors.white),
+                      )),
+                ],
+              ),
+            ),
+            Center(
+              child: _controller!.value.isInitialized
+                  ? AspectRatio(
+                      aspectRatio: _controller!.value.aspectRatio,
+                      child: VideoPlayer(_controller!),
+                    )
+                  : Container(),
+            ),
+            Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 50),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 20,
+                  children: [
+                    IconButton(
+                      color: Colors.white70,
+                      icon: _controller!.value.isPlaying
+                          ? const Icon(Icons.pause)
+                          : const Icon(Icons.play_arrow),
+                      onPressed: () {
+                        setState(() {
+                          if (_controller!.value.isPlaying) {
+                            _controller!.pause();
+                          } else {
+                            _controller!.play();
+                          }
+                        });
+                      },
+                    ),
+                    VideoProgressIndicator(
+                      _controller!,
+                      allowScrubbing: true,
+                      colors: const VideoProgressColors(
+                        playedColor: Colors.white70,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
+        // floatingActionButton: FloatingActionButton(
+        //   onPressed: () {
+        //     setState(() {
+        //       _controller!.value.isPlaying
+        //           ? _controller!.pause()
+        //           : _controller!.play();
+        //     });
+        //   },
+        //   child: Icon(
+        //     _controller!.value.isPlaying ? Icons.pause : Icons.play_arrow,
+        //   ),
+        // ),
+        // floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
-  }
-
-
-  @override
-  void dispose() {
-    super.dispose();
-    _controller!.dispose();
   }
 }

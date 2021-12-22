@@ -347,6 +347,14 @@ class _CameraAppState extends State<CameraApp> {
     }
   }
 
+  Future<void> _deleteCacheDir() async {
+    final cacheDir = await getTemporaryDirectory();
+
+    if (cacheDir.existsSync()) {
+      cacheDir.deleteSync(recursive: true);
+    }
+  }
+
   void onSubtitlePressed() {
     studentSub!.showSubtitles = !studentSub!.showSubtitles;
     teacherSub!.showSubtitles = !teacherSub!.showSubtitles;
@@ -401,6 +409,11 @@ class _CameraAppState extends State<CameraApp> {
               builder: (context) =>
                   PreviewVideo(videoPath: XFile("$cache/duetvideo.mp4"))),
         ).then((_) {
+          _deleteCacheDir();
+          setState(() {
+            isInitCamera = false;
+          });
+          initCamera();
           remakeRecording();
         });
       }
@@ -408,7 +421,6 @@ class _CameraAppState extends State<CameraApp> {
   }
 
   void remakeRecording() {
-    cameraController!.stopVideoRecording();
     duetVideoController!.pause();
     duetVideoController!.seekTo(const Duration(seconds: 0));
   }
