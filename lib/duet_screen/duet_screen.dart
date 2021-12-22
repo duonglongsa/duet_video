@@ -9,10 +9,8 @@ import 'package:flutter_video_duet/preview_screen/preview_screen.dart';
 import 'package:flutter_video_duet/video/video_screen.dart';
 import 'package:gallery_saver/gallery_saver.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:subtitle_wrapper_package/data/models/style/subtitle_border_style.dart';
 import 'package:subtitle_wrapper_package/data/models/style/subtitle_position.dart';
 import 'package:subtitle_wrapper_package/data/models/style/subtitle_style.dart';
-import 'package:subtitle_wrapper_package/subtitle_controller.dart';
 import 'package:subtitle_wrapper_package/subtitle_wrapper_package.dart';
 import 'package:video_player/video_player.dart';
 
