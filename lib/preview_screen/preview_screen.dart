@@ -46,6 +46,14 @@ class _PreviewVideoState extends State<PreviewVideo> {
           onWillPop: _willPopCallback,
           child: Stack(
             children: [
+              Center(
+                child: _controller!.value.isInitialized
+                    ? AspectRatio(
+                        aspectRatio: _controller!.value.aspectRatio,
+                        child: VideoPlayer(_controller!),
+                      )
+                    : Container(),
+              ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(0, 20, 10, 0),
                 child: Row(
@@ -73,7 +81,8 @@ class _PreviewVideoState extends State<PreviewVideo> {
                                           title: const Center(
                                             child: Text(
                                               "Delete this recording",
-                                              style: TextStyle(color: Colors.red),
+                                              style:
+                                                  TextStyle(color: Colors.red),
                                             ),
                                           ),
                                           onTap: () {
@@ -101,7 +110,8 @@ class _PreviewVideoState extends State<PreviewVideo> {
                               });
                         }),
                     TextButton(
-                        style: TextButton.styleFrom(backgroundColor: Colors.red),
+                        style:
+                            TextButton.styleFrom(backgroundColor: Colors.red),
                         onPressed: () {},
                         child: const Text(
                           "Continue",
@@ -110,45 +120,46 @@ class _PreviewVideoState extends State<PreviewVideo> {
                   ],
                 ),
               ),
-              Center(
-                child: _controller!.value.isInitialized
-                    ? AspectRatio(
-                        aspectRatio: _controller!.value.aspectRatio,
-                        child: VideoPlayer(_controller!),
-                      )
-                    : Container(),
-              ),
               Align(
                 alignment: Alignment.bottomCenter,
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(20, 0, 20, 50),
-                  child: Wrap(
-                    alignment: WrapAlignment.center,
-                    spacing: 20,
-                    children: [
-                      IconButton(
-                        color: Colors.white70,
-                        icon: _controller!.value.isPlaying
-                            ? const Icon(Icons.pause)
-                            : const Icon(Icons.play_arrow),
-                        onPressed: () {
-                          setState(() {
-                            if (_controller!.value.isPlaying) {
-                              _controller!.pause();
-                            } else {
-                              _controller!.play();
-                            }
-                          });
-                        },
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black38,
+                      borderRadius: BorderRadius.circular(15)
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+                      child: Wrap(
+                        alignment: WrapAlignment.center,
+                        spacing: 20,
+                        children: [
+                          IconButton(
+                            color: Colors.white70,
+                            icon: _controller!.value.isPlaying
+                                ? const Icon(Icons.pause)
+                                : const Icon(Icons.play_arrow),
+                            onPressed: () {
+                              setState(() {
+                                if (_controller!.value.isPlaying) {
+                                  _controller!.pause();
+                                } else {
+                                  _controller!.play();
+                                }
+                              });
+                            },
+                          ),
+                          VideoProgressIndicator(
+                            _controller!,
+                            allowScrubbing: true,
+                            colors: const VideoProgressColors(
+                              playedColor: Colors.white70,
+                            ),
+                          ),
+                        ],
                       ),
-                      VideoProgressIndicator(
-                        _controller!,
-                        allowScrubbing: true,
-                        colors: const VideoProgressColors(
-                          playedColor: Colors.white70,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
                 ),
               ),

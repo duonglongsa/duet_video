@@ -29,7 +29,7 @@ class FFmpegConfig {
         rightVideoPath +
         " -filter_complex" +
         filter! +
-        "-c:v libx264 -crf 18 -preset ultrafast -c:a aac -strict -2 " +
+        "-c:v libx264 -crf 23 -preset ultrafast -c:a aac -strict -2 " +
         //"-c:v mpeg2video -q:v 3 " +
         outputPath);
   }

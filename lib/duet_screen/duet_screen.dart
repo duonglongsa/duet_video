@@ -44,7 +44,7 @@ class _CameraAppState extends State<CameraApp> {
   VideoPlayerController? duetVideoController;
   bool _isPlaying = false;
   Duration? _duration;
-  Duration? _position;
+  Duration _position = const Duration(seconds: 0);
   bool _isEnd = false;
 
   //show loading when process video
@@ -92,8 +92,8 @@ class _CameraAppState extends State<CameraApp> {
           _duration = duetVideoController!.value.duration;
         });
         if (_position != null) {
-          _duration?.compareTo(_position!) == 0 ||
-                  _duration?.compareTo(_position!) == -1
+          _duration?.compareTo(_position) == 0 ||
+                  _duration?.compareTo(_position) == -1
               ? setState(() {
                   //stop when the duetvideo end
                   print("video end");
@@ -217,54 +217,56 @@ class _CameraAppState extends State<CameraApp> {
                     iconSize: 30,
                     color: Colors.white,
                     onPressed: () {
-                      showModalBottomSheet(
-                        context: context,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.only(
-                            topLeft: Radius.circular(10),
-                            topRight: Radius.circular(10),
+                      if (!_showLoading) {
+                        showModalBottomSheet(
+                          context: context,
+                          shape: const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(10),
+                              topRight: Radius.circular(10),
+                            ),
                           ),
-                        ),
-                        backgroundColor: Colors.white,
-                        builder: (BuildContext context) {
-                          return Wrap(
-                            children: [
-                              Column(
-                                children: [
-                                  ListTile(
-                                    leading: const Icon(
-                                      Icons.refresh,
-                                      color: Colors.black,
+                          backgroundColor: Colors.white,
+                          builder: (BuildContext context) {
+                            return Wrap(
+                              children: [
+                                Column(
+                                  children: [
+                                    ListTile(
+                                      leading: const Icon(
+                                        Icons.refresh,
+                                        color: Colors.black,
+                                      ),
+                                      title: const Text(
+                                        "Re-make recording",
+                                        style: TextStyle(color: Colors.black),
+                                      ),
+                                      onTap: () {
+                                        remakeRecording();
+                                        Navigator.pop(context);
+                                      },
                                     ),
-                                    title: const Text(
-                                      "Re-make recording",
-                                      style: TextStyle(color: Colors.black),
+                                    ListTile(
+                                      leading: const Icon(
+                                        Icons.delete,
+                                        color: Colors.red,
+                                      ),
+                                      title: const Text(
+                                        "Cancle recording",
+                                        style: TextStyle(color: Colors.red),
+                                      ),
+                                      onTap: () {
+                                        Navigator.pop(context);
+                                        Navigator.pop(context);
+                                      },
                                     ),
-                                    onTap: () {
-                                      remakeRecording();
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                  ListTile(
-                                    leading: const Icon(
-                                      Icons.delete,
-                                      color: Colors.red,
-                                    ),
-                                    title: const Text(
-                                      "Cancle recording",
-                                      style: TextStyle(color: Colors.red),
-                                    ),
-                                    onTap: () {
-                                      Navigator.pop(context);
-                                      Navigator.pop(context);
-                                    },
-                                  ),
-                                ],
-                              ),
-                            ],
-                          );
-                        },
-                      );
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        );
+                      }
                     },
                   )),
               Positioned(
@@ -329,25 +331,33 @@ class _CameraAppState extends State<CameraApp> {
                       Icons.radio_button_on,
                     ),
               onPressed: () {
-                if (cameraController!.value.isRecordingVideo) {
-                  if (cameraController!.value.isRecordingPaused) {
-                    onResumeButtonPressed();
+                if (!_showLoading) {
+                  if (cameraController!.value.isRecordingVideo) {
+                    if (cameraController!.value.isRecordingPaused) {
+                      onResumeButtonPressed();
+                    } else {
+                      onPauseButtonPressed();
+                    }
                   } else {
-                    onPauseButtonPressed();
+                    onVideoRecordButtonPressed();
                   }
-                } else {
-                  onVideoRecordButtonPressed();
                 }
               }),
-          IconButton(
-              icon: const Icon(Icons.check_circle),
-              color: Colors.red,
-              iconSize: 30,
-              onPressed: () {
-                if (cameraController!.value.isRecordingVideo) {
-                  onStopButtonPressed(isEnd: false);
-                }
-              }),
+          //sau 5s mới enable nút lưu
+          _position.compareTo(const Duration(seconds: 5)) > 0
+              ? IconButton(
+                  icon: const Icon(Icons.check_circle),
+                  color: Colors.red,
+                  iconSize: 30,
+                  onPressed: () {
+                    if (cameraController!.value.isRecordingVideo &&
+                        !_showLoading) {
+                      onStopButtonPressed(isEnd: false);
+                    }
+                  })
+              : const SizedBox(
+                  width: 48,
+                ),
         ],
       );
     } else {
@@ -481,54 +491,56 @@ class _CameraAppState extends State<CameraApp> {
 
   Future<bool> _willPopCallback() async {
     bool _isPop = false;
-    await showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.only(
-          topLeft: Radius.circular(10),
-          topRight: Radius.circular(10),
+    if (!_showLoading) {
+      await showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            topLeft: Radius.circular(10),
+            topRight: Radius.circular(10),
+          ),
         ),
-      ),
-      backgroundColor: Colors.white,
-      builder: (BuildContext context) {
-        return Wrap(
-          children: [
-            Column(
-              children: [
-                ListTile(
-                  leading: const Icon(
-                    Icons.refresh,
-                    color: Colors.black,
+        backgroundColor: Colors.white,
+        builder: (BuildContext context) {
+          return Wrap(
+            children: [
+              Column(
+                children: [
+                  ListTile(
+                    leading: const Icon(
+                      Icons.refresh,
+                      color: Colors.black,
+                    ),
+                    title: const Text(
+                      "Re-make recording",
+                      style: TextStyle(color: Colors.black),
+                    ),
+                    onTap: () {
+                      remakeRecording();
+                      Navigator.pop(context);
+                    },
                   ),
-                  title: const Text(
-                    "Re-make recording",
-                    style: TextStyle(color: Colors.black),
+                  ListTile(
+                    leading: const Icon(
+                      Icons.delete,
+                      color: Colors.red,
+                    ),
+                    title: const Text(
+                      "Cancle recording",
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _isPop = true;
+                    },
                   ),
-                  onTap: () {
-                    remakeRecording();
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(
-                    Icons.delete,
-                    color: Colors.red,
-                  ),
-                  title: const Text(
-                    "Cancle recording",
-                    style: TextStyle(color: Colors.red),
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    _isPop = true;
-                  },
-                ),
-              ],
-            ),
-          ],
-        );
-      },
-    );
+                ],
+              ),
+            ],
+          );
+        },
+      );
+    }
     return Future.value(_isPop);
   }
 }
