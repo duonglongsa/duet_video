@@ -128,7 +128,8 @@ class _CameraAppState extends State<CameraApp> {
 
   @override
   void dispose() {
-    cameraController?.dispose();
+    cameraController!.dispose();
+    duetVideoController!.dispose();
     super.dispose();
   }
 
@@ -136,157 +137,164 @@ class _CameraAppState extends State<CameraApp> {
   Widget build(BuildContext context) {
     return SafeArea(
       child: Scaffold(
-        body: Stack(
-          children: [
-            Container(
-              height: MediaQuery.of(context).size.height,
-              width: MediaQuery.of(context).size.width,
-              color: Colors.black,
-              child: Column(
-                children: <Widget>[
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(1.0),
-                      child: isInitCamera && isInitVideo
-                          ? Row(
-                              children: [
-                                Expanded(
-                                    child: AspectRatio(
-                                        aspectRatio: 1 /
-                                            cameraController!.value.aspectRatio,
-                                        child: SubTitleWrapper(
-                                            subtitleController: studentSub!,
-                                            videoPlayerController:
-                                                duetVideoController!,
-                                            subtitleStyle: const SubtitleStyle(
-                                              textColor: Colors.white,
-                                              hasBorder: true,
-                                              position: SubtitlePosition(
-                                                bottom: 0,
+        body: WillPopScope(
+          onWillPop: _willPopCallback,
+          child: Stack(
+            children: [
+              Container(
+                height: MediaQuery.of(context).size.height,
+                width: MediaQuery.of(context).size.width,
+                color: Colors.black,
+                child: Column(
+                  children: <Widget>[
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.all(1.0),
+                        child: isInitCamera && isInitVideo
+                            ? Row(
+                                children: [
+                                  Expanded(
+                                      child: AspectRatio(
+                                          aspectRatio: 1 /
+                                              cameraController!
+                                                  .value.aspectRatio,
+                                          child: SubTitleWrapper(
+                                              subtitleController: studentSub!,
+                                              videoPlayerController:
+                                                  duetVideoController!,
+                                              subtitleStyle:
+                                                  const SubtitleStyle(
+                                                textColor: Colors.white,
+                                                hasBorder: true,
+                                                position: SubtitlePosition(
+                                                  bottom: 0,
+                                                ),
                                               ),
-                                            ),
-                                            videoChild: CameraPreview(
-                                                cameraController!)))),
-                                Expanded(
-                                  child: SubTitleWrapper(
-                                    subtitleController: teacherSub!,
-                                    videoPlayerController: duetVideoController!,
-                                    subtitleStyle: const SubtitleStyle(
-                                      textColor: Colors.white,
-                                      hasBorder: true,
-                                      position: SubtitlePosition(
-                                        bottom: 0,
+                                              videoChild: CameraPreview(
+                                                  cameraController!)))),
+                                  Expanded(
+                                    child: SubTitleWrapper(
+                                      subtitleController: teacherSub!,
+                                      videoPlayerController:
+                                          duetVideoController!,
+                                      subtitleStyle: const SubtitleStyle(
+                                        textColor: Colors.white,
+                                        hasBorder: true,
+                                        position: SubtitlePosition(
+                                          bottom: 0,
+                                        ),
                                       ),
+                                      videoChild: AspectRatio(
+                                          aspectRatio: 1 /
+                                              cameraController!
+                                                  .value.aspectRatio,
+                                          child: Center(
+                                            child: AspectRatio(
+                                              aspectRatio: duetVideoController!
+                                                  .value.aspectRatio,
+                                              child: VideoPlayer(
+                                                  duetVideoController!),
+                                            ),
+                                          )),
                                     ),
-                                    videoChild: AspectRatio(
-                                        aspectRatio: 1 /
-                                            cameraController!.value.aspectRatio,
-                                        child: Center(
-                                          child: AspectRatio(
-                                            aspectRatio: duetVideoController!
-                                                .value.aspectRatio,
-                                            child: VideoPlayer(
-                                                duetVideoController!),
-                                          ),
-                                        )),
                                   ),
-                                ),
-                              ],
-                            )
-                          : const Center(child: CircularProgressIndicator()),
-                    ),
-                  ),
-                  VideoProgressIndicator(
-                    duetVideoController!,
-                    allowScrubbing: false,
-                  ),
-                ],
-              ),
-            ),
-            Positioned(
-                top: 20,
-                child: IconButton(
-                  icon: const Icon(Icons.close),
-                  iconSize: 30,
-                  color: Colors.white,
-                  onPressed: () {
-                    showModalBottomSheet(
-                      context: context,
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: BorderRadius.only(
-                          topLeft: Radius.circular(10),
-                          topRight: Radius.circular(10),
-                        ),
+                                ],
+                              )
+                            : const Center(child: CircularProgressIndicator()),
                       ),
-                      backgroundColor: Colors.white,
-                      builder: (BuildContext context) {
-                        return Wrap(
-                          children: [
-                            Column(
-                              children: [
-                                ListTile(
-                                  leading: const Icon(
-                                    Icons.refresh,
-                                    color: Colors.black,
-                                  ),
-                                  title: const Text(
-                                    "Re-make recording",
-                                    style: TextStyle(color: Colors.black),
-                                  ),
-                                  onTap: () {
-                                    remakeRecording();
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                                ListTile(
-                                  leading: const Icon(
-                                    Icons.delete,
-                                    color: Colors.red,
-                                  ),
-                                  title: const Text(
-                                    "Cancle recording",
-                                    style: TextStyle(color: Colors.red),
-                                  ),
-                                  onTap: () {
-                                    Navigator.pop(context);
-                                    Navigator.pop(context);
-                                  },
-                                ),
-                              ],
-                            ),
-                          ],
-                        );
-                      },
-                    );
-                  },
-                )),
-            Positioned(
-                bottom: 20,
-                right: 0,
-                left: 0,
-                child: _captureControlRowWidget()),
-            if (_showLoading)
-              Center(
-                child: Container(
-                    width: 130,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.black38,
-                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: const [
-                        CircularProgressIndicator(),
-                        Text(
-                          "Processing...",
-                          style: TextStyle(color: Colors.white, fontSize: 18),
-                        ),
-                      ],
-                    )),
+                    VideoProgressIndicator(
+                      duetVideoController!,
+                      allowScrubbing: false,
+                    ),
+                  ],
+                ),
               ),
-          ],
+              Positioned(
+                  top: 20,
+                  child: IconButton(
+                    icon: const Icon(Icons.close),
+                    iconSize: 30,
+                    color: Colors.white,
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(10),
+                            topRight: Radius.circular(10),
+                          ),
+                        ),
+                        backgroundColor: Colors.white,
+                        builder: (BuildContext context) {
+                          return Wrap(
+                            children: [
+                              Column(
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(
+                                      Icons.refresh,
+                                      color: Colors.black,
+                                    ),
+                                    title: const Text(
+                                      "Re-make recording",
+                                      style: TextStyle(color: Colors.black),
+                                    ),
+                                    onTap: () {
+                                      remakeRecording();
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(
+                                      Icons.delete,
+                                      color: Colors.red,
+                                    ),
+                                    title: const Text(
+                                      "Cancle recording",
+                                      style: TextStyle(color: Colors.red),
+                                    ),
+                                    onTap: () {
+                                      Navigator.pop(context);
+                                      Navigator.pop(context);
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
+                  )),
+              Positioned(
+                  bottom: 20,
+                  right: 0,
+                  left: 0,
+                  child: _captureControlRowWidget()),
+              if (_showLoading)
+                Center(
+                  child: Container(
+                      width: 130,
+                      height: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.black38,
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: const [
+                          CircularProgressIndicator(),
+                          Text(
+                            "Processing...",
+                            style: TextStyle(color: Colors.white, fontSize: 18),
+                          ),
+                        ],
+                      )),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -347,14 +355,6 @@ class _CameraAppState extends State<CameraApp> {
     }
   }
 
-  Future<void> _deleteCacheDir() async {
-    final cacheDir = await getTemporaryDirectory();
-
-    if (cacheDir.existsSync()) {
-      cacheDir.deleteSync(recursive: true);
-    }
-  }
-
   void onSubtitlePressed() {
     studentSub!.showSubtitles = !studentSub!.showSubtitles;
     teacherSub!.showSubtitles = !teacherSub!.showSubtitles;
@@ -409,7 +409,6 @@ class _CameraAppState extends State<CameraApp> {
               builder: (context) =>
                   PreviewVideo(videoPath: XFile("$cache/duetvideo.mp4"))),
         ).then((_) {
-          _deleteCacheDir();
           setState(() {
             isInitCamera = false;
           });
@@ -478,5 +477,58 @@ class _CameraAppState extends State<CameraApp> {
       print(e);
       return null;
     }
+  }
+
+  Future<bool> _willPopCallback() async {
+    bool _isPop = false;
+    await showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(10),
+          topRight: Radius.circular(10),
+        ),
+      ),
+      backgroundColor: Colors.white,
+      builder: (BuildContext context) {
+        return Wrap(
+          children: [
+            Column(
+              children: [
+                ListTile(
+                  leading: const Icon(
+                    Icons.refresh,
+                    color: Colors.black,
+                  ),
+                  title: const Text(
+                    "Re-make recording",
+                    style: TextStyle(color: Colors.black),
+                  ),
+                  onTap: () {
+                    remakeRecording();
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(
+                    Icons.delete,
+                    color: Colors.red,
+                  ),
+                  title: const Text(
+                    "Cancle recording",
+                    style: TextStyle(color: Colors.red),
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _isPop = true;
+                  },
+                ),
+              ],
+            ),
+          ],
+        );
+      },
+    );
+    return Future.value(_isPop);
   }
 }

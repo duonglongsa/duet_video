@@ -20,8 +20,8 @@ class FFmpegConfig {
   Future<void> excute(
       String leftVideoPath, String rightVideoPath, String outputPath) async {
     filter =
-        " [0:v]hflip,setpts=PTS-STARTPTS,scale=$VERTICAL_DUET_WIDTH:$VERTICAL_DUET_HEIGHT,fps=60,setsar=1[l];"
-        "[1:v]setpts=PTS-STARTPTS,scale=$videoWidth:$videoHeight,pad=$VERTICAL_DUET_WIDTH:$VERTICAL_DUET_HEIGHT:$paddingHoz:$paddingVer,fps=60,setsar=1[r];"
+        " [0:v]hflip,scale=$VERTICAL_DUET_WIDTH:$VERTICAL_DUET_HEIGHT,fps=30,setsar=1[l];"
+        "[1:v]scale=$videoWidth:$videoHeight,pad=$VERTICAL_DUET_WIDTH:$VERTICAL_DUET_HEIGHT:$paddingHoz:$paddingVer,fps=30,setsar=1[r];"
         "[l][r]hstack=inputs=2:shortest=1,format=yuv420p;[0][1]amerge ";
     await FlutterFFmpeg().execute(" -y -i " +
         leftVideoPath +
@@ -29,7 +29,7 @@ class FFmpegConfig {
         rightVideoPath +
         " -filter_complex" +
         filter! +
-        "-c:v libx264 -crf 20 -preset ultrafast -c:a aac -strict -2 " +
+        "-c:v libx264 -crf 18 -preset ultrafast -c:a aac -strict -2 " +
         //"-c:v mpeg2video -q:v 3 " +
         outputPath);
   }
